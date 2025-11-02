@@ -25,7 +25,7 @@ pub fn generate_star_properties() -> StarProperties {
     let (base_temp, base_mass, base_radius, base_lum) = spectral_class.typical_properties();
 
     // Add some variation (±10%) to make stars within same class unique
-    let variation = || 1.0 + rng.gen_range(-0.1..0.1);
+    let mut variation = || 1.0 + rng.gen_range(-0.1..0.1);
 
     StarProperties {
         spectral_class,

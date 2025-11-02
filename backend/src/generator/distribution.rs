@@ -61,7 +61,7 @@ mod tests {
         // Test that points are distributed throughout the volume
         let radius = 100.0;
         let mut min_dist = f64::MAX;
-        let mut max_dist = 0.0;
+        let mut max_dist: f64 = 0.0;
 
         for _ in 0..1000 {
             let pos = generate_sphere_position(radius);

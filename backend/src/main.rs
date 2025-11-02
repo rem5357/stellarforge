@@ -6,7 +6,6 @@ mod api;
 mod models;
 mod database;
 mod generator;
-mod config;
 
 use crate::database::init_pool;
 
