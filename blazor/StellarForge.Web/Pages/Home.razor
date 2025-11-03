@@ -15,7 +15,7 @@
     {
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <strong>Error:</strong> @errorMessage
-            <button type="button" class="btn-close" @@onclick="() => errorMessage = null"></button>
+            <button type="button" class="btn-close" @onclick="@(() => errorMessage = null)"></button>
         </div>
     }
 
@@ -34,21 +34,21 @@
                     <h5 class="mb-0">Generate Stars</h5>
                 </div>
                 <div class="card-body">
-                    <EditForm Model="@@request" OnValidSubmit="@@HandleGenerate">
+                    <EditForm Model="@request" OnValidSubmit="@HandleGenerate">
                         <div class="mb-3">
                             <label class="form-label">Project Name</label>
-                            <InputText class="form-control" @@bind-Value="request.Name" placeholder="My Galaxy" />
+                            <InputText class="form-control" @bind-Value="request.Name" placeholder="My Galaxy" />
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Number of Stars</label>
-                            <InputNumber class="form-control" @@bind-Value="request.NumStars" min="1" max="10000" />
+                            <InputNumber class="form-control" @bind-Value="request.NumStars" min="1" max="10000" />
                             <small class="text-muted">1 to 10,000 star systems</small>
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label">Distribution Type</label>
-                            <select class="form-select" @@bind="request.DistributionType">
+                            <select class="form-select" @bind="request.DistributionType">
                                 <option value="sphere">Sphere</option>
                                 <option value="cube">Cube</option>
                             </select>
@@ -58,26 +58,26 @@
                         {
                             <div class="mb-3">
                                 <label class="form-label">Radius (Light Years)</label>
-                                <InputNumber class="form-control" @@bind-Value="request.RadiusLy" min="1" max="10000" />
+                                <InputNumber class="form-control" @bind-Value="request.RadiusLy" min="1" max="10000" />
                             </div>
                         }
                         else if (request.DistributionType == "cube")
                         {
                             <div class="mb-3">
                                 <label class="form-label">Size X (Light Years)</label>
-                                <InputNumber class="form-control" @@bind-Value="request.SizeXLy" min="1" max="10000" />
+                                <InputNumber class="form-control" @bind-Value="request.SizeXLy" min="1" max="10000" />
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Size Y (Light Years)</label>
-                                <InputNumber class="form-control" @@bind-Value="request.SizeYLy" min="1" max="10000" />
+                                <InputNumber class="form-control" @bind-Value="request.SizeYLy" min="1" max="10000" />
                             </div>
                             <div class="mb-3">
                                 <label class="form-label">Size Z (Light Years)</label>
-                                <InputNumber class="form-control" @@bind-Value="request.SizeZLy" min="1" max="10000" />
+                                <InputNumber class="form-control" @bind-Value="request.SizeZLy" min="1" max="10000" />
                             </div>
                         }
 
-                        <button type="submit" class="btn btn-primary w-100" disabled="@@isGenerating">
+                        <button type="submit" class="btn btn-primary w-100" disabled="@isGenerating">
                             @if (isGenerating)
                             {
                                 <span class="spinner-border spinner-border-sm me-2"></span>
@@ -101,7 +101,7 @@
                         <h5 class="mb-0">✓ Generation Complete</h5>
                     </div>
                     <div class="card-body">
-                        <h6>Project: <strong>@@result.Name</strong></h6>
+                        <h6>Project: <strong>@result.Name</strong></h6>
                         <hr/>
 
                         <div class="row">
@@ -110,15 +110,15 @@
                                 <table class="table table-sm">
                                     <tr>
                                         <td>Total Systems:</td>
-                                        <td><strong>@@result.NumStarSystems</strong></td>
+                                        <td><strong>@result.NumStarSystems</strong></td>
                                     </tr>
                                     <tr>
                                         <td>Total Stars:</td>
-                                        <td><strong>@@result.NumStarsTotal</strong></td>
+                                        <td><strong>@result.NumStarsTotal</strong></td>
                                     </tr>
                                     <tr>
                                         <td>Generation Time:</td>
-                                        <td><strong>@@result.GenerationTimeMs ms</strong></td>
+                                        <td><strong>@result.GenerationTimeMs ms</strong></td>
                                     </tr>
                                 </table>
                             </div>
@@ -127,22 +127,22 @@
                                 <table class="table table-sm">
                                     <tr>
                                         <td>Solo Systems:</td>
-                                        <td><strong>@@result.SoloSystems</strong> (@@((result.SoloSystems * 100.0 / result.NumStarSystems).ToString("F1"))%)</td>
+                                        <td><strong>@result.SoloSystems</strong> (@((result.SoloSystems * 100.0 / result.NumStarSystems).ToString("F1"))%)</td>
                                     </tr>
                                     <tr>
                                         <td>Binary Systems:</td>
-                                        <td><strong>@@result.BinarySystems</strong> (@@((result.BinarySystems * 100.0 / result.NumStarSystems).ToString("F1"))%)</td>
+                                        <td><strong>@result.BinarySystems</strong> (@((result.BinarySystems * 100.0 / result.NumStarSystems).ToString("F1"))%)</td>
                                     </tr>
                                     <tr>
                                         <td>Trinary Systems:</td>
-                                        <td><strong>@@result.TrinarySystems</strong> (@@((result.TrinarySystems * 100.0 / result.NumStarSystems).ToString("F1"))%)</td>
+                                        <td><strong>@result.TrinarySystems</strong> (@((result.TrinarySystems * 100.0 / result.NumStarSystems).ToString("F1"))%)</td>
                                     </tr>
                                 </table>
                             </div>
                         </div>
 
                         <div class="alert alert-info mt-3">
-                            <strong>Project ID:</strong> <code>@@result.ProjectId</code>
+                            <strong>Project ID:</strong> <code>@result.ProjectId</code>
                         </div>
                     </div>
                 </div>
@@ -169,11 +169,11 @@
                                 @foreach (var project in projects.Take(5))
                                 {
                                     <tr>
-                                        <td><strong>@@project.Name</strong></td>
-                                        <td>@@project.NumStarSystems</td>
-                                        <td>@@project.NumStarsTotal</td>
-                                        <td><span class="badge bg-info">@@project.DistributionType</span></td>
-                                        <td><small>@@project.CreatedAt</small></td>
+                                        <td><strong>@project.Name</strong></td>
+                                        <td>@project.NumStarSystems</td>
+                                        <td>@project.NumStarsTotal</td>
+                                        <td><span class="badge bg-info">@project.DistributionType</span></td>
+                                        <td><small>@project.CreatedAt</small></td>
                                     </tr>
                                 }
                             </tbody>
@@ -185,7 +185,7 @@
     </div>
 </div>
 
-@@code {
+@code {
     private GenerateRequest request = new()
     {
         Name = "MyGalaxy",

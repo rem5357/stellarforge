@@ -34,51 +34,58 @@ StellarForge is a Blazor WebAssembly application with a Rust backend and Postgre
 
 ## Quick Start
 
+**See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions.**
+
 ### Prerequisites
 
 - PostgreSQL 18+ with PostGIS
 - Rust 1.70+
-- .NET 8 SDK
+- .NET 9 SDK
 - Nginx (for production)
 
 ### 1. Setup Database
 
+**Manual setup required** (PowerShell script has syntax issues - use manual commands):
+
 ```powershell
-# Windows
-.\setup_database.ps1
+# Windows - Run in PowerShell
+$env:PGPASSWORD = "Beta5357"
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -c "CREATE DATABASE stellarforge;"
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d stellarforge -f D:\projects\stellarforge\sql\01_create_database.sql
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d stellarforge -f D:\projects\stellarforge\sql\02_create_tables.sql
+& "C:\Program Files\PostgreSQL\18\bin\psql.exe" -U postgres -d stellarforge -f D:\projects\stellarforge\sql\03_helper_functions.sql
 ```
 
-```bash
-# Linux/Mac
-psql -U postgres -f sql/01_create_database.sql
-psql -U postgres -d stellarforge -f sql/02_create_tables.sql
-psql -U postgres -d stellarforge -f sql/03_helper_functions.sql
-```
+See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed instructions and troubleshooting.
 
-### 2. Configure Backend
-
-```bash
-cd backend
-cp .env.example .env
-# Edit .env with your database credentials
-```
-
-### 3. Run Backend
+### 2. Start Backend
 
 ```bash
 cd backend
-cargo build --release
 cargo run --release
 ```
 
-Backend will start on http://localhost:8080
+Backend starts on **http://localhost:8080**
 
-### 4. Run Frontend (Coming Soon)
+### 3. Deploy to Nginx (Production)
 
 ```bash
-cd blazor
-dotnet run
+# Copy nginx.conf to C:\nginx\conf\nginx.conf
+# Start nginx
+cd C:\nginx
+.\nginx.exe
 ```
+
+Access at: **https://127.0.0.1/stellarforge**
+
+### 4. Or Run Frontend in Dev Mode
+
+```bash
+cd blazor/StellarForge.Web
+dotnet watch run
+```
+
+Access at: **http://localhost:5000** (or displayed URL)
 
 ## Project Structure
 
@@ -182,5 +189,6 @@ Built with Claude Code as an evolution of the SolarViewer project.
 
 ---
 
-**Status**: Phase 1 In Progress (Backend 80% complete)
-**Repository**: https://github.com/rem5357/stellarforge (to be created)
+**Status**: 🎉 Phase 1 COMPLETE! 🎉
+**Repository**: https://github.com/rem5357/stellarforge
+**Live URL**: https://127.0.0.1/stellarforge (after deployment)

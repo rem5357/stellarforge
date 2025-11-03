@@ -93,7 +93,7 @@ Write-Host ""
 Write-Host "Verifying database setup..." -ForegroundColor Yellow
 $env:PGPASSWORD = $PGPASSWORD
 $tableCount = & psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'stellar';" 2>&1
-Write-Host "Found $tableCount tables in 'stellar' schema" -ForegroundColor Green
+Write-Host "Found $($tableCount) tables in 'stellar' schema" -ForegroundColor Green
 
 # Display connection info
 Write-Host ""
@@ -110,7 +110,7 @@ Write-Host "Connection String:" -ForegroundColor Cyan
 Write-Host "  postgresql://${PGUSER}:${PGPASSWORD}@${PGHOST}:${PGPORT}/${PGDATABASE}" -ForegroundColor White
 Write-Host ""
 Write-Host "Next Steps:" -ForegroundColor Cyan
-Write-Host "  1. Create the Rust backend: cd backend && cargo build" -ForegroundColor White
-Write-Host "  2. Create the Blazor frontend: cd blazor && dotnet build" -ForegroundColor White
+Write-Host "  1. Create the Rust backend: cd backend; cargo build" -ForegroundColor White
+Write-Host "  2. Create the Blazor frontend: cd blazor; dotnet build" -ForegroundColor White
 Write-Host "  3. Configure Nginx reverse proxy" -ForegroundColor White
 Write-Host ""
