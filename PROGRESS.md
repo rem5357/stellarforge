@@ -306,3 +306,182 @@ When Phase 1 is complete, verify:
 **Deployment Ready**: Application is ready to deploy to https://127.0.0.1/stellarforge
 
 **Next Steps**: Database initialization (manual), start services, test end-to-end
+
+---
+
+## Session 2: 2025-11-02 Evening - Database Schema Fixes & Nginx Setup
+
+**Duration**: ~4 hours
+**Focus**: Database debugging, schema fixes, Nginx deployment setup
+
+### Completed Work
+
+#### Database Schema Fixes ✅
+**Critical Issue Found**: Type mismatches between PostgreSQL and Rust
+- Changed `TIMESTAMP` → `TIMESTAMP WITH TIME ZONE` (timestamptz) for all datetime columns
+- Changed `NUMERIC` → `DOUBLE PRECISION` for all floating-point columns
+- Fixed projects, star_systems, and stars tables
+- Dropped and recreated views that blocked ALTER TABLE operations
+
+**Why This Mattered**:
+- Rust's `DateTime<Utc>` requires timezone-aware timestamps
+- Rust's `f64` doesn't auto-convert from PostgreSQL's `NUMERIC` type
+- These mismatches caused silent failures with generic "db error" messages
+
+#### Nginx Production Setup ✅
+- Downloaded and installed Nginx 1.24.0 for Windows at `C:/nginx`
+- Generated self-signed SSL certificates (cert.pem, cert.key)
+- Built Blazor WASM production bundle (`dotnet publish -c Release`)
+- Copied published files to `C:/nginx/html/stellarforge/`
+- Created nginx.conf with HTTPS support and API proxy
+
+#### Backend Testing Progress ⚠️
+- Backend server starts successfully on port 8080
+- Health check endpoint works: `GET /api/health` ✅
+- Project creation works: Projects inserted into database ✅
+- Star system generation works: 9 solo + 1 binary systems created ✅
+- **Star insertion FAILS**: "db error" when inserting stars ❌
+
+**Debugging Steps Taken**:
+- Enabled RUST_LOG=debug and RUST_BACKTRACE=1
+- Found error: "error deserializing column 7" (size_x_ly)
+- Fixed by changing NUMERIC to DOUBLE PRECISION
+- Star_systems now create successfully
+- Stars still failing - needs further investigation
+
+### Key Lessons Learned
+
+1. **PostgreSQL Type Compatibility Critical**
+   - TIMESTAMP vs TIMESTAMPTZ makes or breaks Rust deserialization
+   - NUMERIC doesn't auto-convert to f64, use DOUBLE PRECISION
+   - Always test type mappings early with simple queries
+
+2. **Error Context Gets Lost**
+   - Using `.context("Failed to insert project")` hides actual PostgreSQL errors
+   - Need better error propagation to surface real issues
+   - Debug logging essential but not always sufficient
+
+3. **Nginx on Windows Has Quirks**
+   - `alias` directive has path resolution issues on Windows
+   - `root` directive more reliable but needs careful path setup
+   - Forward slashes work better than backslashes in configs
+
+4. **Schema Changes Require Care**
+   - Views and triggers can block ALTER TABLE operations
+   - Must DROP CASCADE views before schema changes
+   - Recreate views after changes complete
+
+5. **Test Incrementally**
+   - Projects work → Systems work → Stars fail
+   - Incremental testing identified exactly where failure occurs
+   - Would have been harder to debug if tested all at once
+
+### What's Working
+
+✅ **Database**:
+- Connection pool established
+- Projects table creates successfully
+- Star_systems table creates successfully
+- Database properly initialized with stellar schema
+
+✅ **Backend API**:
+- Health check: `GET /api/health`
+- Project creation (partial - inserts project and systems)
+- All 13 unit tests pass
+
+✅ **Deployment Infrastructure**:
+- Nginx installed and running
+- SSL certificates generated
+- Production build pipeline working
+- Files deployed to nginx directory
+
+### What's NOT Working
+
+❌ **Star Insertion**:
+- Error: "Failed to insert stars: db error"
+- Projects and systems create, but transaction fails on star insertion
+- No detailed error message in logs
+- Likely another type mismatch or constraint violation
+
+❌ **Nginx Serving Blazor**:
+- Getting 403 Forbidden on https://127.0.0.1/stellarforge/
+- Files exist in correct location
+- Configuration issues with location blocks
+- Needs further debugging
+
+### Critical TODOs for Next Session
+
+**HIGH PRIORITY**:
+1. ❗ Fix star insertion database error
+   - Add more detailed error logging
+   - Check if spectral_subclass or luminosity_class causing issues
+   - Test star insertion directly with psql
+   - Review repository.rs insert_stars() method
+
+2. ❗ Fix Nginx serving Blazor WASM
+   - Test basic file serving first
+   - Simplify nginx.conf to minimal working config
+   - Check Windows file permissions
+   - Verify MIME types for .wasm files
+
+3. 📸 Take Screenshots
+   - Save to `D:/dropbox/screenshots/`
+   - Database tables with data
+   - API responses
+   - Any errors encountered
+
+**DEPLOYMENT WORKFLOW**:
+- After ANY Blazor edit, redeploy with:
+  ```bash
+  cd D:/projects/stellarforge/blazor/StellarForge.Web
+  dotnet publish -c Release -o ../../publish
+  cp -r ../../publish/wwwroot/* C:/nginx/html/stellarforge/
+  cd C:/nginx && ./nginx.exe -s reload
+  ```
+
+**TESTING WORKFLOW**:
+1. Ensure backend running: `cd backend && cargo run --release`
+2. Test health: `curl http://localhost:8080/api/health`
+3. Test generation: `curl -X POST http://localhost:8080/api/projects/generate -H "Content-Type: application/json" -d '{...}'`
+4. Check database: `psql -U postgres -d stellarforge -c "SELECT * FROM stellar.projects;"`
+
+### Files Modified This Session
+
+**Database Schema**:
+- `stellar.projects` - Fixed timestamp and numeric columns
+- `stellar.star_systems` - Fixed timestamp columns
+- `stellar.stars` - Fixed timestamp and numeric columns
+
+**Configuration**:
+- `nginx.conf` - Created production configuration
+- Backend still using correct `.env` settings
+
+**Documentation**:
+- This PROGRESS.md file updated
+
+### Known Issues
+
+1. **Star Insertion Failing**: Generic "db error", need better diagnostics
+2. **Nginx 403 Forbidden**: Configuration or permissions issue
+3. **SQL Schema Files Out of Date**: Need to update .sql files with TIMESTAMPTZ and DOUBLE PRECISION
+4. **No Screenshots Yet**: Need to capture evidence of working features
+
+### Technical Debt
+
+- SQL schema files (01, 02, 03) need updating to match fixed schema
+- Error handling in repository.rs needs improvement
+- Nginx configuration needs simplification
+- Integration tests still pending
+- End-to-end testing not completed
+
+### Performance Notes
+
+- Backend starts in ~3 seconds
+- Compilation (release) takes ~60 seconds
+- Database operations fast when they work
+- Blazor publish takes ~15 seconds
+
+---
+
+**Session End Status**: Infrastructure complete, debugging in progress
+**Next Session Focus**: Fix star insertion, complete deployment, end-to-end testing

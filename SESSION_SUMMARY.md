@@ -337,3 +337,102 @@ All code is tested, documented, and production-ready. The next session can focus
 **Next Steps**: Deploy and test, begin Phase 2
 
 Built with ❤️ using Claude Code
+
+---
+
+# Session 2 - 2025-11-02 Evening
+
+## Focus: Database Schema Debugging & Deployment Setup
+
+**Duration**: ~4 hours
+**Status**: Critical issues identified and partially resolved
+
+## Major Accomplishments
+
+### ✅ Database Schema Fixed
+- **Root Cause Found**: Type mismatches between PostgreSQL and Rust
+- Changed all `TIMESTAMP` → `TIMESTAMP WITH TIME ZONE` (timestamptz)
+- Changed all `NUMERIC` → `DOUBLE PRECISION` for floating-point columns
+- Affected tables: projects, star_systems, stars
+
+**Impact**: Without these changes, Rust couldn't deserialize database rows, causing silent failures with generic "db error" messages.
+
+### ✅ Nginx Production Deployment Setup
+- Nginx 1.24.0 installed at `C:/nginx`
+- Self-signed SSL certificates generated (cert.pem, cert.key)
+- Blazor WASM production build successful
+- Files deployed to `C:/nginx/html/stellarforge/`
+- nginx.conf configured with HTTPS and API proxy
+
+### ⚠️ Backend Partially Working
+**Working**:
+- ✅ Backend starts on port 8080
+- ✅ Health check: `GET /api/health`
+- ✅ Database connection established
+- ✅ Projects create successfully
+- ✅ Star systems create successfully (9 solo + 1 binary verified in DB)
+
+**Still Failing**:
+- ❌ Star insertion: "db error" when inserting individual stars
+- ❌ Full generation workflow incomplete
+
+## Critical Lessons Learned
+
+### 1. PostgreSQL-Rust Type Compatibility is Critical
+```
+Wrong:  TIMESTAMP           → Rust can't deserialize
+Right:  TIMESTAMPTZ         → Works with DateTime<Utc>
+
+Wrong:  NUMERIC             → Doesn't auto-convert to f64
+Right:  DOUBLE PRECISION    → Direct mapping to f64
+```
+
+### 2. Error Context Hides Real Issues
+Using `.context("Failed to insert project")` wraps errors and hides the actual PostgreSQL error messages. Need better error propagation.
+
+### 3. Debug Incrementally
+Testing showed:
+1. Projects work ✅
+2. Systems work ✅
+3. Stars fail ❌
+
+This incremental approach pinpointed the exact failure location.
+
+## Outstanding Issues
+
+### HIGH PRIORITY - Star Insertion Failing
+- Error: "Failed to insert stars: db error"
+- Projects and systems insert successfully
+- Stars fail during batch insertion
+- Likely causes: spectral_subclass, luminosity_class, or constraint violation
+
+### HIGH PRIORITY - Nginx Not Serving Blazor
+- 403 Forbidden on https://127.0.0.1/stellarforge/
+- Files exist, configuration issues
+
+## Deployment Workflow (Use After Every Edit!)
+
+```bash
+# 1. Rebuild production bundle
+cd D:/projects/stellarforge/blazor/StellarForge.Web
+dotnet publish -c Release -o ../../publish
+
+# 2. Copy to Nginx
+cp -r ../../publish/wwwroot/* C:/nginx/html/stellarforge/
+
+# 3. Reload Nginx
+cd C:/nginx && ./nginx.exe -s reload
+```
+
+## Next Session Priorities
+
+**CRITICAL**:
+1. ❗ Fix star insertion (blocking all testing)
+2. ❗ Fix Nginx serving Blazor (blocking UI access)
+3. 📸 Take screenshots to D:/dropbox/screenshots/
+4. 📝 Update SQL schema files with TIMESTAMPTZ and DOUBLE PRECISION
+
+---
+
+**End of Session 2**
+**Status**: Infrastructure ready, debugging in progress

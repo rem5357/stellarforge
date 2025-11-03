@@ -189,6 +189,40 @@ Built with Claude Code as an evolution of the SolarViewer project.
 
 ---
 
-**Status**: 🎉 Phase 1 COMPLETE! 🎉
+**Status**: ⚠️ Phase 1 - Debugging in Progress (Session 2)
 **Repository**: https://github.com/rem5357/stellarforge
-**Live URL**: https://127.0.0.1/stellarforge (after deployment)
+**Live URL**: https://127.0.0.1/stellarforge (Nginx configured, UI serving pending)
+
+## Current Status (Updated 2025-11-02)
+
+### ✅ Working
+- Rust backend with 13 passing unit tests
+- Database connection and schema (fixed type mismatches)
+- Project creation via API
+- Star system generation (9 solo + 1 binary systems verified in database)
+- Nginx installed with SSL at C:/nginx
+- Blazor WASM production build successful
+
+### ⚠️ In Progress
+- **Star insertion failing** - "db error" during batch insert (HIGH PRIORITY)
+- **Nginx serving Blazor** - 403 Forbidden, configuration issue
+
+### 🔧 Critical Fixes Applied This Session
+- Changed `TIMESTAMP` → `TIMESTAMPTZ` for all datetime columns
+- Changed `NUMERIC` → `DOUBLE PRECISION` for all floating-point columns
+- These resolved Rust deserialization failures
+
+### 📋 Next Session Priorities
+1. ❗ Fix star insertion database error
+2. ❗ Fix Nginx Blazor WASM serving
+3. 📸 Take screenshots (save to D:/dropbox/screenshots/)
+4. 📝 Update SQL schema files with type fixes
+5. ✅ Complete end-to-end testing
+
+### 🚀 Deployment Workflow (Use After Every Edit!)
+```bash
+cd D:/projects/stellarforge/blazor/StellarForge.Web
+dotnet publish -c Release -o ../../publish
+cp -r ../../publish/wwwroot/* C:/nginx/html/stellarforge/
+cd C:/nginx && ./nginx.exe -s reload
+```
