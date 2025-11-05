@@ -8,7 +8,7 @@ StellarForge is a Blazor WebAssembly application with a Rust backend and Postgre
 
 ## Technology Stack
 
-- **Frontend**: Blazor WebAssembly (.NET 8)
+- **Frontend**: Blazor WebAssembly (.NET 9)
 - **Backend**: Rust + Actix-Web
 - **Database**: PostgreSQL 18 + PostGIS
 - **Reverse Proxy**: Nginx
@@ -34,7 +34,14 @@ StellarForge is a Blazor WebAssembly application with a Rust backend and Postgre
 
 ## Quick Start
 
-**See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions.**
+Initialize the database with the provided script:
+
+```powershell
+cd D:\\projects\\stellarforge
+./setup_database.ps1
+```
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions.
 
 ### Prerequisites
 
@@ -168,6 +175,10 @@ cargo build --release
 - [PROJECT.md](PROJECT.md) - Complete project history from SolarViewer
 - [PHASE1_ARCHITECTURE.md](PHASE1_ARCHITECTURE.md) - Detailed Phase 1 design
 - [PROGRESS.md](PROGRESS.md) - Development progress tracking
+
+## Status Update
+
+Note: The Blazor WASM frontend exists in `blazor/StellarForge.Web` and builds successfully with .NET 9. The "(coming soon)" note in the tree above is outdated.
 
 ## Future Phases
 

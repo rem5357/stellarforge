@@ -1,5 +1,160 @@
 # SolarViewer Project
 
+---
+
+# StellarForge – Session Summary (2025-11-04)
+
+This section documents today’s work on the StellarForge repo: what was verified, what changed, what works, and the detailed timeline of the Nginx 403 issue we’ve been troubleshooting.
+
+## Repository Verification
+
+- Confirmed expected structure present: `backend/` (Rust + Actix), `blazor/StellarForge.Web/` (Blazor WASM, net9.0), `sql/` (01/02/03 scripts), `nginx.conf`, `setup_database.ps1`.
+- Backend builds with `cargo check` and runs; health endpoint returns 200 locally.
+- Blazor app restores and builds; published output in `publish/wwwroot`.
+
+## Changes Applied This Session
+
+- Database
+  - Added `pgcrypto` extension so `gen_random_uuid()` is available alongside `uuid-ossp` (01_create_database.sql).
+  - Normalized schema types to match Rust models (02_create_tables.sql):
+    - Timestamps: `TIMESTAMPTZ` for `created_at`/`updated_at`.
+    - Floating point values: `DOUBLE PRECISION` for positions and star physical properties.
+    - Added idempotent trigger creation guard to avoid failures on re-run.
+- Setup Script (PowerShell)
+  - Hardened `setup_database.ps1`:
+    - Auto-discovers `psql.exe` (PATH or common PostgreSQL install locations).
+    - Uses `--set=ON_ERROR_STOP=1` so errors surface early.
+    - Verifies PostGIS availability.
+    - Prints table-count verification and clearer status messages.
+- Backend
+  - Added `backend/.env.example` with `DATABASE_URL`, `HOST`, `PORT` defaults.
+  - Verified compile (`cargo check`) and ran the server; `GET /api/health` returned 200 with JSON payload.
+- Blazor
+  - Updated `wwwroot/index.html` base href to `/stellarforge/` for subpath hosting.
+  - Published Release output to `publish/wwwroot`.
+- Nginx
+  - Iterated on `nginx.conf` to serve the Blazor app under `/stellarforge`, and later simplified to an HTTP‑only local config for testing.
+  - Also copied published assets to `C:\nginx\html\stellarforge` and pointed Nginx there to avoid cross-drive ACL quirks on Windows.
+
+## What Works Now
+
+- Rust backend starts locally and responds healthy at `http://127.0.0.1:8080/api/health`.
+- Blazor app builds and publishes successfully (net9.0).
+- Database setup script runs and applies 01/03; 02 applies on a fresh DB and is idempotent for most parts. Re-running 02 on an existing DB may still fail if objects exist; that is expected without full IF NOT EXISTS guards.
+
+## 403 Forbidden – Troubleshooting Summary
+
+Symptom
+- Accessing the app at `/stellarforge` returns 404 initially and then consistently 403 via Nginx (both Chrome and Edge), even after moving to HTTP-only config.
+
+Observations
+- `index.html` exists and is readable in both `publish/wwwroot` and the mirrored `C:\nginx\html\stellarforge`.
+- Nginx error log shows earlier TLS config warnings but no explicit 403 error lines for the recent requests; access log is currently not emitting lines (may require format adjustment or request not reaching that server block previously).
+
+Configurations Tried (in order)
+1) Alias to publish path with SPA fallback
+```
+location = /stellarforge { return 301 /stellarforge/; }
+location /stellarforge/ {
+  alias D:/projects/stellarforge/publish/wwwroot/;
+  try_files $uri $uri/ /stellarforge/index.html;
+}
+```
+
+2) Root to publish path with SPA fallback
+```
+location /stellarforge/ {
+  root D:/projects/stellarforge/publish/wwwroot;
+  try_files $uri $uri/ /index.html;
+}
+```
+
+3) Mirror assets under Nginx html and alias there
+```
+# Files mirrored to C:\nginx\html\stellarforge
+location /stellarforge/ {
+  alias C:/nginx/html/stellarforge/;
+  try_files $uri $uri/ /stellarforge/index.html;
+}
+```
+
+4) Root to Nginx html with SPA fallback variations
+```
+location /stellarforge/ {
+  root C:/nginx/html;
+  index index.html;
+  try_files $uri /stellarforge/index.html;  # also tried $uri $uri/ fallback and index-only
+}
+```
+
+5) HTTP-only server (removed 443, no redirects) to rule out TLS/redirect loops
+```
+server {
+  listen 80;
+  location = / { return 301 /stellarforge/; }
+  # … the /stellarforge/ block from (4)
+}
+```
+
+Result
+- All variants above returned 403 at `/stellarforge/` in the browser. This strongly suggests Nginx is treating the location as a directory without resolving `index.html`, or running into a permission/path translation edge case on Windows.
+
+Hypotheses
+- Directory index resolution not engaging in that location (context/ordering issue).
+- Windows ACL/permissions on `C:\nginx\html\stellarforge` preventing Nginx from reading `index.html` when accessed as a directory.
+- Hidden redirect or HSTS causing HTTPS requests to hit an older server block path (now removed), producing a 403 from a different config.
+- Logging config not capturing the requests to confirm exact file path resolution.
+
+## Next Steps (Proposed for Tomorrow)
+
+1) Confirm path resolution explicitly
+   - Request `/stellarforge/index.html` directly and observe status.
+   - Add an exact-match override:
+     ```
+     location = /stellarforge/ {
+       root C:/nginx/html;
+       return 200 /stellarforge/index.html;
+     }
+     ```
+
+2) Enable verbose logging to confirm request mapping
+   - `error_log logs/error.log debug;`
+   - Ensure `access_log logs/access.log;` is active and writable; verify file creation and content.
+
+3) Validate file system permissions
+   - Confirm `C:\nginx\html\stellarforge\index.html` grants read access to the account running `nginx.exe`.
+   - Temporarily run Nginx elevated to rule out ACL issues.
+
+4) Simplify path temporarily
+   - Serve the app at root to reduce subpath complexity:
+     ```
+     location / { root C:/nginx/html/stellarforge; try_files $uri /index.html; }
+     ```
+   - If this works, reintroduce `/stellarforge` with either `alias` or a `rewrite` to `/`.
+
+5) Reintroduce HTTPS after HTTP works
+   - Add back 443 only after confirming HTTP path resolution; verify cert file paths are valid relative to `-p C:\nginx`.
+
+## Artifacts Updated
+
+- SQL
+  - `sql/01_create_database.sql` – added `pgcrypto` extension.
+  - `sql/02_create_tables.sql` – TIMESTAMPTZ + DOUBLE PRECISION, idempotent trigger.
+- Scripts
+  - `setup_database.ps1` – robust `psql` discovery, ON_ERROR_STOP, clearer output.
+- Backend
+  - `backend/.env.example` – environment template.
+- Blazor
+  - `blazor/StellarForge.Web/wwwroot/index.html` – base href set to `/stellarforge/`.
+  - Published to `publish/wwwroot`.
+- Nginx
+  - `nginx.conf` – multiple iterations; current state: HTTP-only server on port 80, `/` redirects to `/stellarforge/`, and `/stellarforge/` served from `C:/nginx/html` with `index index.html`.
+
+## Current Status
+
+- Backend OK (health 200). Blazor build OK; assets published and mirrored to Nginx html.
+- Nginx still returns 403 at `/stellarforge/`. Next session will focus on resolving path mapping vs permissions with targeted logging and an exact-match index override.
+
 ## Project Vision
 
 SolarViewer is a Rust-based tool for extracting, storing, and visualizing stellar cartography data from Astrosynthesis save files. The goal is to create a better viewer and mapper that provides superior 2D visualization of 3D stellar data, with PostgreSQL/PostGIS as the data backend for advanced spatial queries and persistent storage.

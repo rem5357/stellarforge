@@ -1,4 +1,3 @@
--- StellarForge Phase 1 Database Setup
 -- PostgreSQL 18+ with PostGIS
 
 -- Create database (run as postgres superuser)
@@ -9,6 +8,8 @@
 
 -- Enable required extensions
 CREATE EXTENSION IF NOT EXISTS postgis;
+-- gen_random_uuid() is provided by pgcrypto; keep uuid-ossp optional for compatibility
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 -- Create schema for stellar data

@@ -10,9 +10,16 @@
 
 ### Database Setup
 
-**Note**: PostgreSQL must be installed and PostGIS extension available.
+You can use the automated script or run commands manually.
 
-#### Manual Database Setup (Recommended)
+#### Automated (Recommended)
+
+```powershell
+cd D:\\projects\\stellarforge
+./setup_database.ps1
+```
+
+#### Manual
 
 1. **Start PostgreSQL** (if not running)
 2. **Open PowerShell as Administrator**

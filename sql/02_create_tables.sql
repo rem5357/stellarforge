@@ -13,20 +13,20 @@ CREATE TABLE IF NOT EXISTS projects (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL UNIQUE,
     description TEXT,
-    created_at TIMESTAMP DEFAULT NOW(),
-    updated_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW(),
 
     -- Generation parameters
     distribution_type VARCHAR(20) NOT NULL CHECK (distribution_type IN ('cube', 'sphere')),
     num_star_systems INTEGER NOT NULL CHECK (num_star_systems > 0 AND num_star_systems <= 10000),
 
     -- Cube parameters (NULL if sphere)
-    size_x_ly NUMERIC CHECK (size_x_ly > 0),
-    size_y_ly NUMERIC CHECK (size_y_ly > 0),
-    size_z_ly NUMERIC CHECK (size_z_ly > 0),
+    size_x_ly DOUBLE PRECISION CHECK (size_x_ly > 0),
+    size_y_ly DOUBLE PRECISION CHECK (size_y_ly > 0),
+    size_z_ly DOUBLE PRECISION CHECK (size_z_ly > 0),
 
     -- Sphere parameters (NULL if cube)
-    radius_ly NUMERIC CHECK (radius_ly > 0),
+    radius_ly DOUBLE PRECISION CHECK (radius_ly > 0),
 
     -- Statistics (updated after generation)
     total_stars INTEGER DEFAULT 0,
@@ -58,11 +58,11 @@ CREATE TABLE IF NOT EXISTS star_systems (
 
     -- 3D position in light-years
     position GEOMETRY(PointZ, 4326) NOT NULL, -- PostGIS 3D point
-    x_ly NUMERIC NOT NULL,
-    y_ly NUMERIC NOT NULL,
-    z_ly NUMERIC NOT NULL,
+    x_ly DOUBLE PRECISION NOT NULL,
+    y_ly DOUBLE PRECISION NOT NULL,
+    z_ly DOUBLE PRECISION NOT NULL,
 
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
 
     UNIQUE(project_id, name)
 );
@@ -88,12 +88,12 @@ CREATE TABLE IF NOT EXISTS stars (
     luminosity_class VARCHAR(5) DEFAULT 'V', -- V = main sequence
 
     -- Physical properties
-    temperature_k NUMERIC NOT NULL CHECK (temperature_k >= 2400 AND temperature_k <= 50000),
-    mass_solar NUMERIC NOT NULL CHECK (mass_solar > 0),
-    radius_solar NUMERIC NOT NULL CHECK (radius_solar > 0),
-    luminosity_solar NUMERIC NOT NULL CHECK (luminosity_solar > 0),
+    temperature_k DOUBLE PRECISION NOT NULL CHECK (temperature_k >= 2400 AND temperature_k <= 50000),
+    mass_solar DOUBLE PRECISION NOT NULL CHECK (mass_solar > 0),
+    radius_solar DOUBLE PRECISION NOT NULL CHECK (radius_solar > 0),
+    luminosity_solar DOUBLE PRECISION NOT NULL CHECK (luminosity_solar > 0),
 
-    created_at TIMESTAMP DEFAULT NOW(),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
 
     UNIQUE(project_id, name)
 );
@@ -141,10 +141,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER projects_updated_at
-    BEFORE UPDATE ON projects
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at();
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1 FROM pg_trigger WHERE tgname = 'projects_updated_at'
+    ) THEN
+        CREATE TRIGGER projects_updated_at
+            BEFORE UPDATE ON projects
+            FOR EACH ROW
+            EXECUTE FUNCTION update_updated_at();
+    END IF;
+END;
+$$;
 
 -- Success message
 SELECT 'StellarForge Phase 1 tables created successfully!' AS status;

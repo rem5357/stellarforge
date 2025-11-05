@@ -15,11 +15,30 @@ $PGDATABASE = "stellarforge"
 
 # Check if PostgreSQL is installed
 Write-Host "Checking PostgreSQL installation..." -ForegroundColor Yellow
+# Resolve psql path (PATH first, then common install locations)
+$PSQL = $null
+$cmd = Get-Command psql -ErrorAction SilentlyContinue
+if ($cmd) { $PSQL = $cmd.Source }
+if (-not $PSQL) {
+    $pf = [string]$Env:ProgramFiles
+    $candidates = @(
+        (Join-Path $pf 'PostgreSQL\18\bin\psql.exe'),
+        (Join-Path $pf 'PostgreSQL\17\bin\psql.exe'),
+        (Join-Path $pf 'PostgreSQL\16\bin\psql.exe'),
+        (Join-Path $pf 'PostgreSQL\15\bin\psql.exe'),
+        (Join-Path $pf 'PostgreSQL\14\bin\psql.exe')
+    )
+    foreach ($p in $candidates) { if (Test-Path $p) { $PSQL = $p; break } }
+}
+if (-not $PSQL) {
+    Write-Host "ERROR: PostgreSQL not found. Please install PostgreSQL 18+ or add psql to PATH." -ForegroundColor Red
+    exit 1
+}
 try {
-    $pgVersion = & psql --version 2>&1
+    $pgVersion = & $PSQL --version 2>&1
     Write-Host "Found: $pgVersion" -ForegroundColor Green
 } catch {
-    Write-Host "ERROR: PostgreSQL not found. Please install PostgreSQL 14+ first." -ForegroundColor Red
+    Write-Host "ERROR: Unable to execute psql at '$PSQL'" -ForegroundColor Red
     exit 1
 }
 
@@ -27,7 +46,7 @@ try {
 Write-Host ""
 Write-Host "Checking for PostGIS extension..." -ForegroundColor Yellow
 $env:PGPASSWORD = $PGPASSWORD
-$postgisCheck = & psql -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -t -c "SELECT 1 FROM pg_available_extensions WHERE name = 'postgis';" 2>&1
+$postgisCheck = & $PSQL --set=ON_ERROR_STOP=1 -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -t -c "SELECT 1 FROM pg_available_extensions WHERE name = 'postgis';" 2>&1
 if ($postgisCheck -match "1") {
     Write-Host "PostGIS extension is available" -ForegroundColor Green
 } else {
@@ -38,13 +57,13 @@ if ($postgisCheck -match "1") {
 # Drop existing database if it exists (optional, commented out for safety)
 Write-Host ""
 Write-Host "Checking if database '$PGDATABASE' exists..." -ForegroundColor Yellow
-$dbExists = & psql -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = '$PGDATABASE';" 2>&1
+$dbExists = & $PSQL --set=ON_ERROR_STOP=1 -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -t -c "SELECT 1 FROM pg_database WHERE datname = '$PGDATABASE';" 2>&1
 if ($dbExists -match "1") {
     Write-Host "Database '$PGDATABASE' already exists." -ForegroundColor Yellow
     $response = Read-Host "Do you want to drop and recreate it? (yes/no)"
     if ($response -eq "yes") {
         Write-Host "Dropping existing database..." -ForegroundColor Yellow
-        & psql -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -c "DROP DATABASE IF EXISTS $PGDATABASE;" 2>&1 | Out-Null
+        & $PSQL --set=ON_ERROR_STOP=1 -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -c "DROP DATABASE IF EXISTS $PGDATABASE;" 2>&1 | Out-Null
         Write-Host "Database dropped." -ForegroundColor Green
     } else {
         Write-Host "Skipping database creation. Proceeding with existing database." -ForegroundColor Yellow
@@ -55,7 +74,7 @@ if ($dbExists -match "1") {
 if ($response -eq "yes" -or -not ($dbExists -match "1")) {
     Write-Host ""
     Write-Host "Creating database '$PGDATABASE'..." -ForegroundColor Yellow
-    & psql -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -c "CREATE DATABASE $PGDATABASE;" 2>&1 | Out-Null
+    & $PSQL --set=ON_ERROR_STOP=1 -h $PGHOST -p $PGPORT -U $PGUSER -d postgres -c "CREATE DATABASE $PGDATABASE;" 2>&1 | Out-Null
     Write-Host "Database created successfully!" -ForegroundColor Green
 }
 
@@ -74,7 +93,7 @@ foreach ($sqlFile in $sqlFiles) {
     if (Test-Path $sqlFile) {
         Write-Host "Executing: $sqlFile" -ForegroundColor Cyan
         $env:PGPASSWORD = $PGPASSWORD
-        & psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -f $sqlFile 2>&1 | Out-Null
+        & $PSQL --set=ON_ERROR_STOP=1 -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -f $sqlFile 2>&1 | Out-Null
         if ($LASTEXITCODE -eq 0) {
             Write-Host "  ✓ Success" -ForegroundColor Green
         } else {
@@ -92,7 +111,7 @@ foreach ($sqlFile in $sqlFiles) {
 Write-Host ""
 Write-Host "Verifying database setup..." -ForegroundColor Yellow
 $env:PGPASSWORD = $PGPASSWORD
-$tableCount = & psql -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'stellar';" 2>&1
+$tableCount = (& $PSQL --set=ON_ERROR_STOP=1 -h $PGHOST -p $PGPORT -U $PGUSER -d $PGDATABASE -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'stellar';" 2>&1).Trim()
 Write-Host "Found $($tableCount) tables in 'stellar' schema" -ForegroundColor Green
 
 # Display connection info
